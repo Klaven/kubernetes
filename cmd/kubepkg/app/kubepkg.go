@@ -43,7 +43,11 @@ func Run() error {
 	// set up the filesystem
 	// TODO: do this
 
+	// maybe we can just map instead of setting up the filesystem? might make things simpler.
+	// https://fpm.readthedocs.io/en/latest/source/dir.html
+
 	// build the args
+	// TODO: add override handling
 	args := []string{
 		fmt.Sprintf("--version='%s'", config.Version),
 		fmt.Sprintf("--iteration='%s'", "0"),
@@ -71,7 +75,6 @@ func Run() error {
 
 	cmd.Dir = "."
 	_, err = cmd.CombinedOutput()
-	// profit
 
 	return err
 }
