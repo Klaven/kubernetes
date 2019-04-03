@@ -136,6 +136,7 @@ release_filegroup(
     conditioned_srcs = for_platforms(for_node = [
         "//cmd/kube-proxy",
         "//cmd/kubeadm",
+        "//cmd/kubepkg",
         "//cmd/kubelet",
     ]),
 )

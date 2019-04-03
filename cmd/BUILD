@@ -30,6 +30,7 @@ filegroup(
         "//cmd/kubectl:all-srcs",
         "//cmd/kubelet:all-srcs",
         "//cmd/kubemark:all-srcs",
+        "//cmd/kubepkg:all-srcs",
         "//cmd/linkcheck:all-srcs",
     ],
     tags = ["automanaged"],
