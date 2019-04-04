@@ -43,11 +43,20 @@ func Run() error {
 	// set up the filesystem
 	// TODO: do this
 
+	/*
+		if wd==/root/ in the docker image
+		We could mount the location the binaries are to	/root/bin
+		then all we need to do is
+		/root/bin/=/usr/bin/
+		?
+	*/
+
 	// maybe we can just map instead of setting up the filesystem? might make things simpler.
 	// https://fpm.readthedocs.io/en/latest/source/dir.html
 
 	// build the args
 	// TODO: add override handling
+	// TODO: overrides sounded awesome... but are kind of a pain.
 	args := []string{
 		fmt.Sprintf("--version='%s'", config.Version),
 		fmt.Sprintf("--iteration='%s'", "0"),
@@ -65,7 +74,7 @@ func Run() error {
 	args = append(args,
 		"-s dir",
 		"-t rpm",
-		".", //path
+		"/root/bin/=/usr/bin/", //path
 	)
 
 	fmt.Printf("args: %s\n\n", args)
@@ -73,7 +82,7 @@ func Run() error {
 	// do the things
 	cmd := exec.Command("fpm", args...)
 
-	cmd.Dir = "."
+	cmd.Dir = "/root/"
 	_, err = cmd.CombinedOutput()
 
 	return err
