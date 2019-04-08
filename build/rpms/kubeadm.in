@@ -1,0 +1,36 @@
+Name: kubeadm
+Version: ${KUBEADM_VERSION}
+Release: 00
+License: ASL 2.0
+Summary: Container Cluster Manager - Kubernetes Cluster Bootstrapping Tool
+Requires: kubelet >= 1.8.0
+Requires: kubectl >= 1.8.0
+Requires: kubernetes-cni >= 0.7.5
+Requires: cri-tools >= 1.11.0
+
+URL: https://kubernetes.io
+
+%description
+Command-line utility for deploying a Kubernetes cluster.
+
+%install
+cd %{_builddir}
+install -m 755 -d %{buildroot}%{_unitdir}
+install -m 755 -d %{buildroot}%{_unitdir}/kubelet.service.d/
+install -m 755 -d %{buildroot}%{_bindir}
+install -m 755 -d %{buildroot}%{_sysconfdir}/cni/net.d/
+install -m 755 -d %{buildroot}%{_sysconfdir}/kubernetes/manifests/
+install -m 755 -d %{buildroot}/var/lib/kubelet/
+install -p -m 755 -t %{buildroot}%{_bindir}/ kubelet
+install -p -m 755 -t %{buildroot}%{_bindir}/ kubectl
+install -p -m 755 -t %{buildroot}%{_bindir}/ kubeadm
+install -p -m 644 -t %{buildroot}%{_unitdir}/ kubelet.service
+install -p -m 644 -t %{buildroot}%{_unitdir}/kubelet.service.d/ 10-kubeadm.conf
+install -p -m 755 -t %{buildroot}%{_bindir}/ cri-tools/crictl
+
+%files -n kubeadm
+%{_bindir}/kubeadm
+%{_unitdir}/kubelet.service.d/10-kubeadm.conf
+%{_bindir}/kubelet
+%{_unitdir}/kubelet.service
+%{_sysconfdir}/kubernetes/manifests/
