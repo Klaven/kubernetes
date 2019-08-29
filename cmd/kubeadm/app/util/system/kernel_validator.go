@@ -32,7 +32,6 @@ import (
 	"github.com/pkg/errors"
 
 	errorsutil "k8s.io/apimachinery/pkg/util/errors"
-	"k8s.io/klog"
 )
 
 var _ Validator = &KernelValidator{}
@@ -72,12 +71,15 @@ func (k *KernelValidator) Validate(spec SysSpec) (error, error) {
 	}
 	k.kernelRelease = release
 	var errs []error
+	var warns []error
 	errs = append(errs, k.validateKernelVersion(spec.KernelSpec))
 	// only validate kernel config when necessary (currently no kernel config for windows)
 	if len(spec.KernelSpec.Required) > 0 || len(spec.KernelSpec.Forbidden) > 0 || len(spec.KernelSpec.Optional) > 0 {
-		errs = append(errs, k.validateKernelConfig(spec.KernelSpec))
+		warn, err := k.validateKernelConfig(spec.KernelSpec)
+		errs = append(errs, err)
+		warns = append(warns, warn)
 	}
-	return nil, errorsutil.NewAggregate(errs)
+	return errorsutil.NewAggregate(warns), errorsutil.NewAggregate(errs)
 }
 
 // validateKernelVersion validates the kernel version.
@@ -95,12 +97,12 @@ func (k *KernelValidator) validateKernelVersion(kSpec KernelSpec) error {
 }
 
 // validateKernelConfig validates the kernel configurations.
-func (k *KernelValidator) validateKernelConfig(kSpec KernelSpec) error {
-	allConfig, err := k.getKernelConfig()
+func (k *KernelValidator) validateKernelConfig(kSpec KernelSpec) (error, error) {
+	allConfig, warn, err := k.getKernelConfig()
 	if err != nil {
-		return errors.Wrap(err, "failed to parse kernel config")
+		return warn, errors.Wrap(err, "failed to parse kernel config")
 	}
-	return k.validateCachedKernelConfig(allConfig, kSpec)
+	return warn, k.validateCachedKernelConfig(allConfig, kSpec)
 }
 
 // validateCachedKernelConfig validates the kernel confgiurations cached in internal data type.
@@ -233,34 +235,31 @@ func (k *KernelValidator) getKernelConfigReader() (io.Reader, error) {
 }
 
 // getKernelConfig gets kernel config from kernel config file and convert kernel config to internal type.
-func (k *KernelValidator) getKernelConfig() (map[string]kConfigOption, error) {
+func (k *KernelValidator) getKernelConfig() (map[string]kConfigOption, error, error) {
 	r, err := k.getKernelConfigReader()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	return k.parseKernelConfig(r)
 }
 
 // parseKernelConfig converts kernel config to internal type.
-func (k *KernelValidator) parseKernelConfig(r io.Reader) (map[string]kConfigOption, error) {
+func (k *KernelValidator) parseKernelConfig(r io.Reader) (map[string]kConfigOption, error, error) {
 	config := map[string]kConfigOption{}
 	regex := regexp.MustCompile(validKConfigRegex)
 	s := bufio.NewScanner(r)
+	var errs []error
 	for s.Scan() {
 		if err := s.Err(); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		line := strings.TrimSpace(s.Text())
 		if !regex.MatchString(line) {
 			continue
 		}
 		fields := strings.Split(line, "=")
-		if len(fields) != 2 {
-			klog.Errorf("Unexpected fields number in config %q", line)
-			continue
-		}
-		config[fields[0]] = kConfigOption(fields[1])
+		config[fields[0]] = kConfigOption(fields[1][0])
 	}
-	return config, nil
+	return config, errorsutil.NewAggregate(errs), nil
 
 }

@@ -207,7 +207,8 @@ CONFIG_3=n`
 	v := &KernelValidator{
 		Reporter: DefaultReporter,
 	}
-	got, err := v.parseKernelConfig(bytes.NewReader([]byte(config)))
+	got, warn, err := v.parseKernelConfig(bytes.NewReader([]byte(config)))
 	assert.Nil(t, err, "Expect error not to occur when parse kernel configuration %q", config)
+	assert.Nil(t, warn, "Expect warnings not to occur when parsing kernel configuration %q", config)
 	assert.Equal(t, expected, got)
 }
