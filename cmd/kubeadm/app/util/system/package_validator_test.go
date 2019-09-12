@@ -185,7 +185,7 @@ func TestValidatePackageVersion(t *testing.T) {
 	for _, test := range []struct {
 		desc  string
 		specs []PackageSpec
-		err   error
+		err   []error
 	}{
 		{
 			desc: "all packages meet the spec",
@@ -200,14 +200,14 @@ func TestValidatePackageVersion(t *testing.T) {
 				{Name: "foo", VersionRange: ">=1.0"},
 				{Name: "bar", VersionRange: ">=3.0"},
 			},
-			err: errors.New("package \"bar 2.1.0\" does not meet the spec \"bar (>=3.0)\""),
+			err: []error{errors.New("package \"bar 2.1.0\" does not meet the spec \"bar (>=3.0)\"")},
 		},
 		{
 			desc: "package not installed",
 			specs: []PackageSpec{
 				{Name: "baz"},
 			},
-			err: errors.New("package \"baz\" does not exist"),
+			err: []error{errors.New("package \"baz\" does not exist")},
 		},
 		{
 			desc: "use variable in package name",
@@ -224,9 +224,22 @@ func TestValidatePackageVersion(t *testing.T) {
 			if test.err != nil {
 				if err == nil {
 					t.Errorf("%s: v.validate() is expected to fail.", test.desc)
-				} else if test.err.Error() != err.Error() {
-					t.Errorf("%s: v.validate(): err = %q, want = %q", test.desc, err, test.err)
+				} else if len(test.err) != len(err) {
+					t.Errorf("%s: v.validate() expected %d number of errors got %d", test.desc, len(test.err), len(err))
+				} else {
+					for _, v := range test.err {
+						found := false
+						for _, iv := range err {
+							if iv.Error() == v.Error() {
+								found = true
+							}
+						}
+						if !found {
+							t.Errorf("%s: v.validate(): err = %q, want = %q", test.desc, err, test.err)
+						}
+					}
 				}
+
 			}
 		})
 	}

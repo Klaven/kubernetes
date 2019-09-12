@@ -63,11 +63,11 @@ const (
 )
 
 // Validate is part of the system.Validator interface.
-func (k *KernelValidator) Validate(spec SysSpec) (error, error) {
+func (k *KernelValidator) Validate(spec SysSpec) ([]error, []error) {
 	helper := KernelValidatorHelperImpl{}
 	release, err := helper.GetKernelReleaseVersion()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get kernel release")
+		return nil, []error{errors.Wrap(err, "failed to get kernel release")}
 	}
 	k.kernelRelease = release
 	var errs []error
@@ -79,7 +79,7 @@ func (k *KernelValidator) Validate(spec SysSpec) (error, error) {
 		errs = append(errs, err)
 		warns = append(warns, warn)
 	}
-	return errorsutil.NewAggregate(warns), errorsutil.NewAggregate(errs)
+	return warns, errs
 }
 
 // validateKernelVersion validates the kernel version.

@@ -41,12 +41,12 @@ const (
 )
 
 // Validate is part of the system.Validator interface.
-func (c *CgroupsValidator) Validate(spec SysSpec) (error, error) {
+func (c *CgroupsValidator) Validate(spec SysSpec) ([]error, []error) {
 	subsystems, err := c.getCgroupSubsystems()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get cgroup subsystems")
+		return nil, []error{errors.Wrap(err, "failed to get cgroup subsystems")}
 	}
-	return nil, c.validateCgroupSubsystems(spec.Cgroups, subsystems)
+	return nil, []error{c.validateCgroupSubsystems(spec.Cgroups, subsystems)}
 }
 
 func (c *CgroupsValidator) validateCgroupSubsystems(cgroupSpec, subsystems []string) error {

@@ -36,12 +36,12 @@ func (o *OSValidator) Name() string {
 }
 
 // Validate is part of the system.Validator interface.
-func (o *OSValidator) Validate(spec SysSpec) (error, error) {
+func (o *OSValidator) Validate(spec SysSpec) ([]error, []error) {
 	os, err := exec.Command("uname").CombinedOutput()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get os name")
+		return nil, []error{errors.Wrap(err, "failed to get os name")}
 	}
-	return nil, o.validateOS(strings.TrimSpace(string(os)), spec.OS)
+	return nil, []error{o.validateOS(strings.TrimSpace(string(os)), spec.OS)}
 }
 
 func (o *OSValidator) validateOS(os, specOS string) error {
