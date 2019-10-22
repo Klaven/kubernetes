@@ -401,42 +401,12 @@ func performEtcdStaticPodUpgrade(certsRenewMgr *renewal.Manager, client clientse
 	return false, nil
 }
 
-// StaticPodControlPlane upgrades a static pod-hosted control plane
-func StaticPodControlPlane(client clientset.Interface, waiter apiclient.Waiter, pathMgr StaticPodPathManager, cfg *kubeadmapi.InitConfiguration, etcdUpgrade, renewCerts bool, oldEtcdClient, newEtcdClient etcdutil.ClusterInterrogator) error {
+func staticPodControlPlane(client clientset.Interface, waiter apiclient.Waiter, pathMgr StaticPodPathManager, cfg *kubeadmapi.InitConfiguration, etcdUpgrade, renewCerts bool, oldEtcdClient, newEtcdClient etcdutil.ClusterInterrogator) error {
 	recoverManifests := map[string]string{}
-	var isExternalEtcd bool
 
 	beforePodHashMap, err := waiter.WaitForStaticPodControlPlaneHashes(cfg.NodeRegistration.Name)
 	if err != nil {
 		return err
-	}
-
-	if oldEtcdClient == nil {
-		if cfg.Etcd.External != nil {
-			// External etcd
-			isExternalEtcd = true
-			etcdClient, err := etcdutil.New(
-				cfg.Etcd.External.Endpoints,
-				cfg.Etcd.External.CAFile,
-				cfg.Etcd.External.CertFile,
-				cfg.Etcd.External.KeyFile,
-			)
-			if err != nil {
-				return errors.Wrap(err, "failed to create etcd client for external etcd")
-			}
-			oldEtcdClient = etcdClient
-			// Since etcd is managed externally, the new etcd client will be the same as the old client
-			if newEtcdClient == nil {
-				newEtcdClient = etcdClient
-			}
-		} else {
-			// etcd Static Pod
-			etcdClient, err := etcdutil.NewFromCluster(client, cfg.CertificatesDir)
-			if err != nil {
-				return errors.Wrap(err, "failed to create etcd client")
-			}
-			oldEtcdClient = etcdClient
-		}
 	}
 
 	var certsRenewMgr *renewal.Manager
@@ -448,7 +418,7 @@ func StaticPodControlPlane(client clientset.Interface, waiter apiclient.Waiter, 
 	}
 
 	// etcd upgrade is done prior to other control plane components
-	if !isExternalEtcd && etcdUpgrade {
+	if (cfg.Etcd.External == nil) && etcdUpgrade {
 		// set the TLS upgrade flag for all components
 		fmt.Printf("[upgrade/etcd] Upgrading to TLS for %s\n", constants.Etcd)
 
@@ -492,6 +462,36 @@ func StaticPodControlPlane(client clientset.Interface, waiter apiclient.Waiter, 
 	// The calls are set here by design; we should _not_ use "defer" above as that would remove the directories
 	// even in the "fail and rollback" case, where we want the directories preserved for the user.
 	return pathMgr.CleanupDirs()
+}
+
+// StaticPodControlPlane upgrades a static pod-hosted control plane
+func StaticPodControlPlane(client clientset.Interface, waiter apiclient.Waiter, pathMgr StaticPodPathManager, cfg *kubeadmapi.InitConfiguration, etcdUpgrade, renewCerts bool) error {
+
+	var oldEtcdClient, newEtcdClient etcdutil.ClusterInterrogator
+	if cfg.Etcd.External != nil {
+		// External etcd
+		etcdClient, err := etcdutil.New(
+			cfg.Etcd.External.Endpoints,
+			cfg.Etcd.External.CAFile,
+			cfg.Etcd.External.CertFile,
+			cfg.Etcd.External.KeyFile,
+		)
+		if err != nil {
+			return errors.Wrap(err, "failed to create etcd client for external etcd")
+		}
+		// Since etcd is managed externally, the new etcd client will be the same as the old client
+		oldEtcdClient = etcdClient
+		newEtcdClient = etcdClient
+	} else {
+		// etcd Static Pod
+		etcdClient, err := etcdutil.NewFromCluster(client, cfg.CertificatesDir)
+		if err != nil {
+			return errors.Wrap(err, "failed to create etcd client")
+		}
+		oldEtcdClient = etcdClient
+	}
+
+	return staticPodControlPlane(client, waiter, pathMgr, cfg, etcdUpgrade, renewCerts, oldEtcdClient, newEtcdClient)
 }
 
 // rollbackOldManifests rolls back the backed-up manifests if something went wrong.
@@ -604,7 +604,7 @@ func PerformStaticPodUpgrade(client clientset.Interface, waiter apiclient.Waiter
 	}
 
 	// The arguments oldEtcdClient and newEtdClient, are uninitialized because passing in the clients allow for mocking the client during testing
-	return StaticPodControlPlane(client, waiter, pathManager, internalcfg, etcdUpgrade, renewCerts, nil, nil)
+	return StaticPodControlPlane(client, waiter, pathManager, internalcfg, etcdUpgrade, renewCerts)
 }
 
 // DryRunStaticPodUpgrade fakes an upgrade of the control plane

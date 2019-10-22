@@ -77,7 +77,6 @@ certificatesDir: %s
 etcd:
   local:
     dataDir: %s
-    image: ""
 imageRepository: k8s.gcr.io
 kubernetesVersion: %s
 networking:
@@ -536,7 +535,7 @@ func TestStaticPodControlPlane(t *testing.T) {
 				}
 			}
 
-			actualErr := StaticPodControlPlane(
+			actualErr := staticPodControlPlane(
 				nil,
 				waiter,
 				pathMgr,
